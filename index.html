@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Klickos Tap Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        /* --- GENEL STİLLER --- */
+        body { 
+            text-align: center; 
+            font-family: 'Arial', sans-serif; 
+            color: #ffffff;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+            background: #121212;
+            background-image: radial-gradient(circle at 50% 10%, #4a2c00, #121212);
+        }
+        /* --- ÜST BÖLÜM --- */
+        #topSection {
+            padding-top: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+        }
+        #topInfo {
+            font-size: 1.2em;
+            color: #ffda79;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        #scoreDisplay {
+            font-size: 5em;
+            color: #ffffff;
+            font-weight: bold;
+            text-shadow: 0 0 15px rgba(255, 218, 121, 0.8);
+        }
+        #rankDisplay {
+            font-size: 1.2em;
+            color: #b0b0b0;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+        }
+        /* --- COİN BUTONU --- */
+        #coinArea {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 300px;
+            height: 300px;
+        }
+        #tapButton {
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            font-size: 1.8em;
+            background: linear-gradient(145deg, #ffda79, #e6b85c);
+            color: #8c733f;
+            border: 8px solid #ffd57a;
+            cursor: pointer;
+            box-shadow: 
+                0 0 60px rgba(255, 218, 121, 0.9),
+                0 8px 15px rgba(0, 0, 0, 0.5),
+                inset 0 0 20px rgba(255, 255, 255, 0.4);
+            transition: transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            z-index: 10;
+        }
+        #tapButton:active {
+            transform: scale(0.95); 
+        }
+        /* --- TIKLAMA EFEKTİ --- */
+        .tap-effect {
+            position: absolute;
+            font-size: 3.5em;
+            font-weight: bold;
+            color: #ffffff;
+            opacity: 1;
+            animation: riseAndFade 0.6s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+            pointer-events: none;
+            text-shadow: 0 0 8px #ffda79;
+            z-index: 20;
+            top: 25%; 
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        @keyframes riseAndFade {
+            0% { transform: translate(-50%, 0); opacity: 1; }
+            100% { transform: translate(-50%, -150px); opacity: 0; }
+        }
+        /* --- ENERJİ BARI --- */
+        #energyContainer {
+            width: 90%;
+            max-width: 400px;
+            height: 10px;
+            background-color: #333333;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            border: 1px solid #444; 
+        }
+        #energyBar {
+            height: 100%;
+            width: 100%; 
+            background-color: #ffaa00;
+            transition: width 0.3s ease;
+        }
+        #energyStatus {
+            color: #ffffff;
+            font-size: 1em;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            width: 90%;
+            max-width: 400px;
+        }
+        /* --- ALT MENÜ BAR --- */
+        #bottomMenu {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            background-color: #121212;
+            padding: 10px 0 20px 0;
+            border-top: 1px solid #333333;
+        }
+        .menuItem {
+            flex: 1;
+            padding: 10px 0;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #ffda79;
+            text-shadow: 0 0 5px rgba(255, 218, 121, 0.4);
+        }
+        .menuItem:hover {
+            color: #ffffff;
+        }
+        /* --- MODAL STİLLERİ --- */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 100; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            padding-top: 60px;
+            box-sizing: border-box;
+            justify-content: center;
+            overflow-y: auto;
+        }
+        .modal-content {
+            background-color: #2a2a47; 
+            margin: auto;
+            padding: 20px;
+            border: 2px solid #5345e9;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 15px;
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            line-height: 1;
+        }
+        /* --- FRENS MODALI STİLLERİ --- */
+        #frensModal h2 {
+            text-align: center;
+            font-size: 1.8em;
+            margin-top: 0;
+        }
+        #frensSummary {
+            background-color: #333333;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .frensStat {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+        .statItem {
+            font-size: 1.1em;
+            color: #ffffff;
+        }
+        .statItem span {
+            color: #ffda79;
+            font-weight: bold;
+        }
+        #frensListHeader {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin: 20px 0 10px 0;
+        }
+        .frenItem {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #333333;
+        }
+        .frenItem:last-child {
+            border-bottom: none;
+        }
+        .frenAvatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #4CAF50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .frenInfo {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+            text-align: left;
+        }
+        .frenDetails {
+            font-size: 0.9em;
+            color: #b0b0b0;
+            margin-top: 2px;
+        }
+        .frenReward {
+            color: #ffda79;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        #inviteFrenButton {
+            width: 100%;
+            background-color: #ffaa00;
+            color: #121212;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        /* --- BOOSTS STİLLERİ --- */
+        .booster-group-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin: 20px 0 10px 0;
+        }
+        .free-booster-item {
+            background-color: #333333;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            flex: 1;
+            cursor: pointer;
+        }
+        .free-booster-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .booster-item {
+            background-color: #333333;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            border-bottom: 1px solid #444;
+        }
+        .booster-info {
+            display: flex;
+            align-items: center;
+        }
+        .booster-icon {
+            font-size: 30px;
+            margin-right: 15px;
+        }
+        .booster-name {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .booster-level, .booster-price {
+            font-size: 0.9em;
+            color: #ffda79;
+        }
+        .booster-buy-info {
+            text-align: right;
+        }
+        .buy-button {
+             display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="topSection">
+        <div id="topInfo">
+             <a href="#" style="color:#ffda79; text-decoration:none;">Join squad ></a>
+        </div>
+        <div id="scoreDisplay">0</div>
+        <div id="rankDisplay">
+            <span style="margin-right: 5px;">🏆</span> Bronze >
+        </div>
+    </div>
+
+    <div id="coinArea">
+        <button id="tapButton">
+            KLICKOS
+        </button>
+    </div>
+
+    <div>
+        <div id="energyStatus">
+            <span>⚡ <span id="currentEnergyText">1000</span> / <span id="maxEnergyText">1000</span></span>
+            <span>+<span id="tapValueText">1</span></span>
+        </div>
+        <div id="energyContainer">
+            <div id="energyBar"></div>
+        </div>
+    </div>
+
+    <div id="bottomMenu">
+        <div class="menuItem" id="frensButton">🐻 Frens</div>
+        <div class="menuItem" id="earnButton">💰 Earn</div>
+        <div class="menuItem" id="boostsButton">🚀 Boosts</div>
+    </div>
+
+    <div id="frensModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="frensModal">&times;</span>
+            <h2 id="frensCountDisplay" style="color:#ffda79;">0 Frens</h2> 
+            <p style="color:#999; text-align:center;">Invite a fren</p>
+            
+            <div id="frensSummary">
+                <div class="frensStat">
+                    <div class="statItem">
+                        <span id="earnedCoinsDisplay">+0</span> <br> Kazanılan Coin
+                    </div>
+                    <div class="statItem">
+                        <span style="color:#fff;">🏆 Liderlik Sıralaması</span> <br> (Bot Kullanıcıları Arasında)
+                    </div>
+                </div>
+            </div>
+
+            <h3 id="frensListHeader">Frens List</h3>
+            
+            <div id="frensList">
+                <p style="text-align: center; color: #999;">Henüz davet ettiğiniz kimse yok. Arkadaşlarınızı davet edin!</p>
+            </div>
+            
+            <button id="inviteFrenButton">Invite a fren</button>
+        </div>
+    </div>
+
+    <div id="boostsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="boostsModal">&times;</span>
+            
+            <h3 class="booster-group-title">Free daily boosters</h3>
+            <div class="free-booster-container">
+                
+                <div class="free-booster-item" data-item="turbo" data-price="0">
+                    <div style="font-size: 1.2em; font-weight: bold;">Turbo</div>
+                    <div style="font-size: 0.9em; color: #999;" id="turboCountText">6/6 available</div>
+                    <div style="font-size: 30px; margin-top: 5px;">🚀</div>
+                </div>
+                
+                <div class="free-booster-item" data-item="energyFull" data-price="0">
+                    <div style="font-size: 1.2em; font-weight: bold;">Full Energy</div>
+                    <div style="font-size: 0.9em; color: #999;" id="energyFullCountText">12/12 available</div>
+                    <div style="font-size: 30px; margin-top: 5px;">⚡</div>
+                </div>
+            </div>
+
+            <h3 class="booster-group-title">Boosters</h3>
+            
+            <div class="booster-item" data-item="autoTapBot" data-price="20000">
+                <div class="booster-info">
+                    <span class="booster-icon">🤖</span>
+                    <div>
+                        <div class="booster-name">Auto Tap bot <span style="color:#aaa; font-weight: normal;">off</span></div>
+                        <div class="booster-level">Taps when you're asleep</div>
+                    </div>
+                </div>
+                <div class="booster-buy-info">
+                    <div class="booster-price">20,000 🟡</div>
+                </div>
+            </div>
+
+            <div class="booster-item" data-item="multiClick" data-price="1000">
+                <div class="booster-info">
+                    <span class="booster-icon">👆</span>
+                    <div>
+                        <div class="booster-name">Multitap</div>
+                        <div class="booster-level">100 🟡 • 0 lvl</div>
+                    </div>
+                </div>
+                <div class="booster-buy-info">
+                    <div class="booster-price">1000 🟡</div>
+                </div>
+            </div>
+            
+            <div class="booster-item" data-item="rechargeSpeed" data-price="1000">
+                <div class="booster-info">
+                    <span class="booster-icon">⚡</span>
+                    <div>
+                        <div class="booster-name">Recharging speed</div>
+                        <div class="booster-level">100 🟡 • 0 lvl</div>
+                    </div>
+                </div>
+                <div class="booster-buy-info">
+                    <div class="booster-price">1000 🟡</div>
+                </div>
+            </div>
+            
+            <div class="booster-item" data-item="energyLimit" data-price="1000">
+                <div class="booster-info">
+                    <span class="booster-icon">🔋</span>
+                    <div>
+                        <div class="booster-name">Energy Limit</div>
+                        <div class="booster-level">100 🟡 • 0 lvl</div>
+                    </div>
+                </div>
+                <div class="booster-buy-info">
+                    <div class="booster-price">1000 🟡</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="earnModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" data-modal="earnModal">&times;</span>
+            <h2>💰 Earn (Görevler)</h2>
+            <p>Yakında eklenecek görevlerle ekstra Klickos kazan!</p>
+        </div>
+    </div>
+
+    <script>
+        // PARÇA 2 BURAYA GELİYOR
+        // --- TEMEL DEĞİŞKENLER ---
+        let currentScore = 346; 
+        let tapValue = 1; 
+        const maxEnergy = 1000;
+        let currentEnergy = 978; 
+        let multiClickLevel = 1; 
+        let isBoostActive = false;
+        const energyRegenRate = 1;
+        const regenInterval = 1000;
+        
+        // YENİ: Ücretsiz Boost Kotaları ve Sıfırlanma Mantığı
+        let maxTurbo = 6;
+        let maxEnergyFull = 12;
+        let turboCount = 6; // Başlangıçta 6/6
+        let energyFullCount = 12; // Başlangıçta 12/12
+        let lastResetDate = localStorage.getItem('lastResetDate') || new Date(0).toDateString(); // Tarayıcı depolamadan alınır
+
+        // --- HTML ELEMENTLERİ ---
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const tapButton = document.getElementById('tapButton');
+        const energyBar = document.getElementById('energyBar');
+        const currentEnergyText = document.getElementById('currentEnergyText');
+        const tapValueText = document.getElementById('tapValueText');
+        const maxEnergyText = document.getElementById('maxEnergyText');
+        const coinArea = document.getElementById('coinArea');
+        
+        // Modal Sayac Elementleri
+        const turboCountText = document.getElementById('turboCountText');
+        const energyFullCountText = document.getElementById('energyFullCountText');
+        const frensCountDisplay = document.getElementById('frensCountDisplay');
+        const earnedCoinsDisplay = document.getElementById('earnedCoinsDisplay');
+        const frensListElement = document.getElementById('frensList');
+
+        // Modal ve Diğer Elemanlar
+        const allCloseButtons = document.querySelectorAll('.close-button');
+        const buyableItems = document.querySelectorAll('.booster-item, .free-booster-item');
+
+        // Referans Link Ayarları
+        const userID = "123456789"; 
+        const botUsername = "Klickos_bot"; 
+        const referralLink = `https://t.me/${botUsername}?start=${userID}`;
+        
+        // Simülasyon: Kullanıcının referansları (Başlangıçta boş veya test amaçlı veri)
+        let frensData = []; 
+        
+        // --- INITIAL GÜNCELLEMELER ---
+        scoreDisplay.textContent = currentScore;
+        maxEnergyText.textContent = maxEnergy;
+        
+        // --- GÜNLÜK BOOST SIFIRLAMA KONTROLÜ ---
+        function checkDailyReset() {
+            const today = new Date().toDateString();
+            if (lastResetDate !== today) {
+                // Yeni gün! Kotayı sıfırla.
+                turboCount = maxTurbo;
+                energyFullCount = maxEnergyFull;
+                lastResetDate = today;
+                localStorage.setItem('lastResetDate', today);
+                // NOT: Gerçek projede bu, sunucu saatiyle yapılmalıdır.
+            }
+            updateBoostCounts();
+        }
+
+        // --- BOOST SAYACI VE GÖRÜNÜMÜ GÜNCELLEMESİ ---
+        function updateBoostCounts() {
+            turboCountText.textContent = `${turboCount}/${maxTurbo} available`;
+            energyFullCountText.textContent = `${energyFullCount}/${maxEnergyFull} available`;
+        }
+
+        // --- FRENS LİSTESİNİ GÜNCELLEME (MOCK DATA) ---
+        function updateFrensList() {
+            frensCountDisplay.textContent = `${frensData.length} Frens`;
+            
+            // Simülasyon: Toplam referans ödülünü hesapla
+            let totalEarned = frensData.reduce((sum, fren) => sum + fren.reward, 0);
+            earnedCoinsDisplay.textContent = `+${totalEarned.toLocaleString()}`;
+
+            if (frensData.length === 0) {
+                frensListElement.innerHTML = '<p style="text-align: center; color: #999;">Henüz davet ettiğiniz kimse yok. Arkadaşlarınızı davet edin!</p>';
+                return;
+            }
+
+            // Gerçekçi Frens Listesini oluşturma
+            frensListElement.innerHTML = frensData.map(fren => `
+                <div class="frenItem">
+                    <div class="frenInfo">
+                        <div class="frenAvatar" style="background-color: ${fren.color};">${fren.initials}</div>
+                        <div>
+                            <div class="frenName">${fren.name}</div>
+                            <div class="frenDetails">🏆 ${fren.rank} • ${fren.score.toLocaleString()}</div>
+                        </div>
+                    </div>
+                    <div class="frenReward">+${fren.reward.toLocaleString()}</div>
+                </div>
+            `).join('');
+        }
+
+        // --- ENERJİ VE GÜNCELLEME FONKSİYONLARI ---
+        function updateEnergyBar() {
+            const percentage = (currentEnergy / maxEnergy) * 100;
+            energyBar.style.width = `${percentage}%`;
+            currentEnergyText.textContent = currentEnergy;
+            
+            if (currentEnergy <= 0) {
+                tapButton.disabled = true;
+                tapButton.style.opacity = 0.5;
+                tapButton.textContent = "ENERJİ BİTTİ";
+            } else {
+                tapButton.disabled = false;
+                tapButton.style.opacity = 1;
+                tapButton.textContent = "KLICKOS";
+            }
+        }
+        
+        function regenEnergy() {
+            if (currentEnergy < maxEnergy) {
+                currentEnergy = Math.min(maxEnergy, currentEnergy + energyRegenRate);
+                updateEnergyBar();
+            }
+        }
+        setInterval(regenEnergy, regenInterval);
+
+        function updateTapValue() {
+            let value = tapValue * multiClickLevel;
+            if (isBoostActive) {
+                value += 10;
+            }
+            tapValueText.textContent = value;
+            return value;
+        }
+
+        function showTapEffect(event, value) {
+            const effect = document.createElement('div');
+            effect.textContent = `+${value}`; 
+            effect.classList.add('tap-effect');
+            coinArea.appendChild(effect);
+            effect.addEventListener('animationend', () => { effect.remove(); });
+        }
+
+        // --- TIKLAMA OYUN MEKANİĞİ ---
+        function handleTap(event) {
+            if (currentEnergy <= 0) return;
+
+            const earnedCoins = updateTapValue();
+            
+            currentScore += earnedCoins;
+            currentEnergy -= 1;
+
+            scoreDisplay.textContent = currentScore;
+            updateEnergyBar();
+            showTapEffect(event, earnedCoins);
+        }
+
+        // --- DÜZELTİLMİŞ MAĞAZA MEKANİĞİ (Kota Kontrolü Eklendi) ---
+        function buyItem(itemName, price) {
+            price = parseInt(price);
+            
+            // Ücretsiz Boost Kontrolü
+            if (itemName === "turbo" && turboCount <= 0) {
+                 alert("Bugünlük tüm Turbo haklarınızı kullandınız!");
+                return;
+            }
+            if (itemName === "energyFull" && energyFullCount <= 0) {
+                 alert("Bugünlük tüm Full Energy haklarınızı kullandınız!");
+                return;
+            }
+            
+            // Paralel Satın Alma Kontrolü
+            if (price > 0 && currentScore < price) {
+                alert("Yetersiz Klickos Coin!");
+                return;
+            }
+
+            if (price > 0) {
+                currentScore -= price;
+                scoreDisplay.textContent = currentScore;
+            }
+            
+            closeModal('boostsModal');
+            
+            // Satın Alma/Kullanım İşlemleri
+            if (itemName === "multiClick") {
+                multiClickLevel = 2; 
+                updateTapValue();
+                alert(`Multitap (x${multiClickLevel}) aktive edildi!`);
+            } 
+            else if (itemName === "turbo") {
+                if (isBoostActive) clearTimeout(window.boostTimer);
+                isBoostActive = true;
+                updateTapValue();
+                turboCount -= 1; // Kota eksiltildi
+                updateBoostCounts(); // Sayac güncellendi
+                
+                window.boostTimer = setTimeout(() => {
+                    isBoostActive = false;
+                    updateTapValue();
+                    alert("Turbo Boost süresi doldu.");
+                }, 10 * 60 * 1000); 
+                alert("Turbo Boost (10 Dk) aktive edildi!");
+            } 
+            else if (itemName === "energyFull") {
+                currentEnergy = maxEnergy;
+                energyFullCount -= 1; // Kota eksiltildi
+                updateBoostCounts(); // Sayac güncellendi
+                updateEnergyBar();
+                alert("Full Energy (Tam Dolum) yapıldı!");
+            }
+            // Diğer görsel ürünler
+            else if (itemName === "autoTapBot") {
+                alert("Auto Tap Bot satın alındı (Görsel)!");
+            }
+             else if (itemName === "rechargeSpeed") {
+                alert("Recharging speed satın alındı (Görsel)!");
+            }
+             else if (itemName === "energyLimit") {
+                alert("Energy Limit satın alındı (Görsel)!");
+            }
+        }
+
+        // --- MODAL FONKSİYONLARI ---
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = "flex";
+             if (modalId === 'frensModal') {
+                updateFrensList(); // Frens Modal açılınca listeyi güncelle
+            }
+        }
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = "none";
+        }
+        
+        // --- OLAY DİNLEYİCİLERİ ---
+        document.getElementById('tapButton').addEventListener('click', handleTap);
+        document.getElementById('frensButton').addEventListener('click', () => openModal('frensModal'));
+        document.getElementById('boostsButton').addEventListener('click', () => openModal('boostsModal'));
+        document.getElementById('earnButton').addEventListener('click', () => openModal('earnModal')); 
+        document.getElementById('inviteFrenButton').addEventListener('click', () => {
+            // Davet linkini kopyala
+            navigator.clipboard.writeText(referralLink).then(() => {
+                document.getElementById('inviteFrenButton').textContent = "LİNK KOPYALANDI!";
+                
+                // Simülasyon: Kendinizi davet etmiş gibi test verisi ekleyebilirsiniz (Opsiyonel)
+                // frensData.push({name: 'Test Fren', initials: 'TF', rank: 'Silver', score: 15000, reward: 500, color: '#ff77aa'}); 
+
+                setTimeout(() => { document.getElementById('inviteFrenButton').textContent = "Invite a fren"; }, 1500);
+            });
+        });
+
+        // Booster öğelerine tıklama
+        buyableItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const itemName = item.dataset.item;
+                const price = item.dataset.price;
+                buyItem(itemName, price);
+            });
+        });
+
+        allCloseButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                closeModal(e.target.dataset.modal);
+            });
+        });
+
+        // Başlangıç durumlarını ayarla ve Günlük Sıfırlamayı Kontrol et
+        checkDailyReset();
+        updateEnergyBar();
+        updateTapValue();
+        
+    </script>
+</body>
+</html>

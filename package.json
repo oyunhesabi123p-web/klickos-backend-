@@ -1,0 +1,12 @@
+{
+  "name": "klickos-vercel-backend",
+  "version": "1.0.0",
+  "description": "Backend for Klickos TMA",
+  "main": "api/user.js",
+  "scripts": {
+    "start": "node api/user.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.3"
+  }
+}
