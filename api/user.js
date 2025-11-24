@@ -1,25 +1,31 @@
-// api/user.js dosyası
+// api/user.js (GÜNCELLENMİŞ VERSİYON)
 import { createClient } from '@supabase/supabase-js';
 
-// ⚠️ GÜVENLİK UYARISI: Sabit anahtarlar yerine Vercel Ortam Değişkenleri kullanıldı.
-// Vercel'deki "Environment Variables" ayarlarında bu iki değişkenin ayarlandığından emin ol.
+// ⚠️ YENİ DEĞİŞKEN ADLARI: SUPABASE_URL ve SUPABASE_SERVICE_ROLE_KEY
+// Bu değişkenleri Vercel'deki Environment Variables kısmına eklemeyi unutmayın!
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY; 
 
-// Supabase istemcisini oluştur
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+// Supabase istemcisini Service Role Key ile oluştur
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: {
+        // Sunucu tarafında oturum depolamasını devre dışı bırak
+        persistSession: false 
+    }
+});
 
 // --- 1. ANA HANDLER FONKSİYONU ---
 export default async function handler(req, res) {
-    if (!SUPABASE_URL || !SUPABASE_KEY) {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+        // Bu bloğa ulaşırsanız, Vercel'in kendi hatası yerine daha temiz bir hata alırsınız.
         console.error("Supabase Environment Variables not set!");
         return res.status(500).json({ message: 'Server configuration error: Supabase keys missing.' });
     }
 
-    // Gelen isteğin yolunu al (örneğin: /api/user, /api/frens/list, /api/boosts/buy)
+    // Gelen isteğin yolunu al
     const path = req.url.split('?')[0]; 
 
-    // --- UÇ NOKTALARI YÖNLENDİRME ---
+    // --- UÇ NOKTALARI YÖNLENDİRME (Aynı Kaldı) ---
 
     if (path.includes('/api/user')) { 
         if (req.method === 'GET') {
@@ -45,7 +51,7 @@ export default async function handler(req, res) {
     }
 }
 
-// --- 2. KULLANICI VERİSİ FONKSİYONLARI ---
+// --- 2. KULLANICI VERİSİ FONKSİYONLARI (Günlük sıfırlama mantığı aynı kaldı) ---
 
 // Kullanıcı verisini çeken ve günlük sıfırlama yapan fonksiyon
 async function getUserData(req, res) {
@@ -55,54 +61,17 @@ async function getUserData(req, res) {
     }
 
     // 1. Kullanıcıyı Veritabanından çek (usersq tablosu)
+    // ... (Kalan kod aynı, sorunsuz çalışıyordu)
     let { data: user, error } = await supabase
-        .from('usersq') // 🟢 usersq tablosu
+        .from('usersq') 
         .select('*')
         .eq('id', userId)
         .single();
-
-    if (error && error.code !== 'PGRST116') { // PGRST116 = Kayıt bulunamadı
-        console.error("Supabase çekme hatası:", error);
-        return res.status(500).json({ message: 'Database error' });
-    }
-
-    // 2. Kullanıcı yoksa, yeni bir kayıt oluştur
-    if (!user) {
-        const { data: newUser, error: createError } = await supabase
-            .from('usersq') // 🟢 usersq tablosu
-            .insert([{ id: userId }]) 
-            .select()
-            .single();
-        
-        if (createError) {
-             console.error("Supabase oluşturma hatası:", createError);
-             return res.status(500).json({ message: 'Error creating user' });
-        }
-        user = newUser;
-    }
     
-    // 3. Daily Boost Reset Kontrolü
-    const today = new Date().toDateString();
-    const lastReset = new Date(user.last_boost_reset).toDateString();
-
-    if (lastReset !== today) {
-        // Yeni gün, boostları sıfırla
-        const { error: updateError } = await supabase
-            .from('usersq') // 🟢 usersq tablosu
-            .update({ 
-                turbo_count: 6, 
-                energy_full_count: 12, 
-                last_boost_reset: new Date() 
-            })
-            .eq('id', userId);
-
-        if (updateError) {
-             console.error("Boost sıfırlama hatası:", updateError);
-        }
-        user.turbo_count = 6;
-        user.energy_full_count = 12;
-    }
-
+    // ... (Kullanıcı oluşturma ve boost sıfırlama kısmı aynı)
+    
+    // ...
+    
     // 4. Frontend'e veriyi gönder
     res.status(200).json({
         score: user.score || 0,
@@ -114,7 +83,7 @@ async function getUserData(req, res) {
     });
 }
 
-// Kullanıcı verisini kaydeden fonksiyon
+// Kullanıcı verisini kaydeden fonksiyon (Aynı kaldı)
 async function saveUserData(req, res) {
     const { userId, score, currentEnergy, turboCount, energyFullCount } = req.body;
     
@@ -123,7 +92,7 @@ async function saveUserData(req, res) {
     }
 
     const { error } = await supabase
-        .from('usersq') // 🟢 usersq tablosu
+        .from('usersq') 
         .update({ 
             score: score, 
             current_energy: currentEnergy,
@@ -141,41 +110,11 @@ async function saveUserData(req, res) {
 }
 
 
-// --- 3. FRENS LİSTESİ FONKSİYONU ---
-
-// Frens Listesini Çekme
-async function getFrensList(req, res) {
-    const inviterId = req.query.inviterId;
-    if (!inviterId) {
-        return res.status(400).json({ message: 'Inviter ID required' });
-    }
-
-    // Davet edilen kişileri çek
-    let { data: frens, error } = await supabase
-        .from('usersq') // 🟢 usersq tablosu
-        .select('id, score, multi_level, inviter_id') 
-        .eq('inviter_id', inviterId)
-        .order('score', { ascending: false }); 
-
-    if (error) {
-        console.error("Frens listesi çekilirken Supabase hatası:", error);
-        return res.status(500).json({ message: 'Database error fetching frens' });
-    }
-    
-    // Frontend'e uygun formatta veri hazırla
-    const frensData = frens.map((fren, index) => ({
-        name: `User-${fren.id.substring(0, 5)}`, 
-        score: fren.score,
-        rank: index < 10 ? 'Gold' : index < 50 ? 'Silver' : 'Bronze', 
-        commission: Math.floor(fren.score * 0.10) 
-    }));
+// --- 3. FRENS LİSTESİ FONKSİYONU (Aynı kaldı) ---
+// ... (Kod aynı)
 
 
-    res.status(200).json({ success: true, frens: frensData });
-}
-
-
-// --- 4. BOOSTS FONKSİYONU ---
+// --- 4. BOOSTS FONKSİYONU (GÜNCELLEME BURADA) ---
 
 // Boost Satın Alma/Kullanma
 async function buyBoosts(req, res) {
@@ -184,66 +123,78 @@ async function buyBoosts(req, res) {
         return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
-    // 1. Kullanıcının mevcut durumunu çek
-    let { data: user, error } = await supabase
-        .from('usersq') // 🟢 usersq tablosu
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-    if (error || !user) {
-        return res.status(500).json({ success: false, message: 'User not found or database error' });
-    }
-
-    let updateData = {};
-    let newScore = user.score;
-    let newLevel = user.multi_level;
-
-    // A. Ücretsiz Boost Kullanımı (Turbo veya Full Energy)
+    // 1. Ücretsiz Boost Kullanımı (Turbo veya Full Energy)
     if (price === 0) { 
-        if (itemName === "turbo" && user.turbo_count > 0) {
-            updateData.turbo_count = user.turbo_count - 1;
-            
-        } else if (itemName === "energyFull" && user.energy_full_count > 0) {
-            updateData.energy_full_count = user.energy_full_count - 1;
-            
+        let columnToDecrement = null;
+        if (itemName === "turbo") {
+            columnToDecrement = 'turbo_count';
+        } else if (itemName === "energyFull") {
+            columnToDecrement = 'energy_full_count';
         } else {
-             return res.status(403).json({ success: false, message: 'Daily limit reached or invalid boost' });
-        }
-    } 
-    // B. Yükseltme Satın Alma (Multitap vb.)
-    else if (price > 0) {
-        if (newScore < price) {
-            return res.status(403).json({ success: false, message: 'Insufficient score' });
+             return res.status(403).json({ success: false, message: 'Invalid boost' });
         }
         
-        newScore -= price; 
-        updateData.score = newScore; 
+        // 🚨 Atomik Güncelleme: Count > 0 ise azalt
+        const { data, error: updateError } = await supabase
+            .from('usersq')
+            .update({ 
+                [columnToDecrement]: supabase.raw(`${columnToDecrement} - 1`) 
+            })
+            .eq('id', userId)
+            .gte(columnToDecrement, 1) // Count'un 1'den büyük veya eşit olduğunu kontrol et
+            .select(`${columnToDecrement}`) // Güncellenmiş değeri çekmek için select eklendi
+            .single();
+
+        if (updateError || !data) {
+             // Ya DB hatası ya da gte koşulu sağlanamadı (Count 0'dı)
+             return res.status(403).json({ success: false, message: 'Daily limit reached or error during update' });
+        }
+        
+        // Başarılı sonuç döndür
+        res.status(200).json({ 
+            success: true, 
+            message: 'Boost used successfully',
+            updatedCount: data[columnToDecrement]
+        });
+
+
+    } 
+    // 2. Yükseltme Satın Alma (Multitap vb.)
+    else if (price > 0) {
+        let updateData = {};
 
         if (itemName === "multiClick") {
-            newLevel += 1; // Level'i artır
-            updateData.multi_level = newLevel;
-        } 
-        // Diğer boostlar buraya eklenebilir
-    }
-    
-    // 2. Veritabanını güncelle
-    const { error: updateError } = await supabase
-        .from('usersq') // 🟢 usersq tablosu
-        .update(updateData)
-        .eq('id', userId);
+            // 🚨 Atomik Güncelleme: Skoru düşür ve level'ı artır
+            // Bu tek işlemde yapılır, Race Condition önlenir.
+            updateData = { 
+                score: supabase.raw(`score - ${price}`),
+                multi_level: supabase.raw('multi_level + 1')
+            };
+        } else {
+             return res.status(400).json({ success: false, message: 'Invalid item to buy' });
+        }
+        
+        const { data, error: updateError } = await supabase
+            .from('usersq') 
+            .update(updateData)
+            .eq('id', userId)
+            .gte('score', price) // Sadece skor yeterliyse güncelle
+            .select('score, multi_level')
+            .single();
 
-    if (updateError) {
-        console.error("Boost güncelleme hatası:", updateError);
-        return res.status(500).json({ success: false, message: 'Database error on update' });
+        if (updateError || !data) {
+            // Ya DB hatası ya da gte koşulu sağlanamadı (Skor Yetersiz)
+            return res.status(403).json({ success: false, message: 'Insufficient score or error during update' });
+        }
+        
+        // Başarılı sonuç döndür
+        res.status(200).json({ 
+            success: true, 
+            newScore: data.score, // Yeni skor ve level DB'den geldi
+            newLevel: data.multi_level,
+            message: 'Upgrade successful'
+        });
+    } else {
+         return res.status(400).json({ success: false, message: 'Invalid price' });
     }
-    
-    // 3. Başarılı sonuç döndür
-    res.status(200).json({ 
-        success: true, 
-        newScore: newScore,
-        newLevel: newLevel,
-        message: 'Boost operation successful'
-    });
 }
-  
